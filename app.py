@@ -10,7 +10,7 @@ st.set_page_config(page_title="VoiceOfDine AI", layout="wide")
 
 st.title("🍽️ VoiceOfDine AI")
 st.subheader("Restaurant Review Intelligence & Decision Support System")
-st.caption("Turning real customer feedback into business insights using NLP")
+st.caption("Turning real customer feedback into actionable insights using NLP")
 
 # ---------------- LOAD DATA ----------------
 df = pd.read_csv("reviews.csv")
@@ -31,6 +31,7 @@ for c in df.columns:
 
 # ---------------- CLEAN RATING COLUMN ----------------
 if rating_col:
+    # extract numbers like 4.2, 3, 4.5/5 → 4.5
     df[rating_col] = df[rating_col].astype(str).str.extract(r'(\d+\.?\d*)')
     df[rating_col] = pd.to_numeric(df[rating_col], errors='coerce')
 
@@ -53,19 +54,14 @@ df["Sentiment"] = df[review_col].apply(get_sentiment)
 st.sidebar.title("🔐 Restaurant Login")
 
 restaurants = df[restaurant_col].dropna().unique()
-
-selected_restaurant = st.sidebar.selectbox(
-    "Select Your Restaurant",
-    sorted(restaurants)
-)
+selected_restaurant = st.sidebar.selectbox("Select Your Restaurant", sorted(restaurants))
 
 restaurant_df = df[df[restaurant_col] == selected_restaurant]
 
-# ---------------- HEADER ----------------
+# ---------------- HEADER METRICS ----------------
 st.subheader(f"📊 Dashboard for: {selected_restaurant}")
 
 col1, col2 = st.columns(2)
-
 col1.metric("Total Reviews", len(restaurant_df))
 
 if rating_col and restaurant_df[rating_col].notna().sum() > 0:
@@ -88,7 +84,7 @@ if avg_rating is not None:
     st.write(health)
 
 # ---------------- SENTIMENT PIE ----------------
-st.subheader("😊 Customer Sentiment")
+st.subheader("😊 Customer Sentiment Distribution")
 
 sentiment_counts = restaurant_df["Sentiment"].value_counts().reset_index()
 sentiment_counts.columns = ["Sentiment", "Count"]
@@ -100,10 +96,9 @@ st.plotly_chart(fig1)
 st.subheader("🗣️ Customer Voice Insights")
 
 text = " ".join(restaurant_df[review_col].astype(str))
-
 wc = WordCloud(width=800, height=400, background_color="white").generate(text)
 
-plt.figure(figsize=(10,5))
+plt.figure(figsize=(10, 5))
 plt.imshow(wc, interpolation="bilinear")
 plt.axis("off")
 st.pyplot(plt)
@@ -113,10 +108,10 @@ st.subheader("⚠️ Key Customer Complaints")
 
 reviews_text = text.lower()
 
-service_words = ["slow", "late", "delay", "waiting", "wait"]
-price_words = ["expensive", "costly", "overpriced"]
-food_words = ["bad", "cold", "tasteless", "worst"]
-staff_words = ["rude", "unfriendly", "attitude"]
+service_words = ["slow", "late", "delay", "waiting", "wait", "service bad"]
+price_words = ["expensive", "costly", "overpriced", "price high"]
+food_words = ["bad", "cold", "tasteless", "worst", "not good"]
+staff_words = ["rude", "unfriendly", "attitude", "staff bad"]
 clean_words = ["dirty", "unclean", "smell", "hygiene"]
 
 def count_mentions(words):
@@ -153,31 +148,55 @@ if clean_issues >= 1:
 if not issues_found:
     st.success("No major complaints detected")
 
-# ---------------- AI SUGGESTIONS ----------------
+# ---------------- MAIN PROBLEM AREA ----------------
+st.subheader("📊 Main Problem Area")
+
+problem_dict = {
+    "Service": service_issues,
+    "Food": food_issues,
+    "Price": price_issues,
+    "Staff": staff_issues,
+    "Cleanliness": clean_issues
+}
+
+top_problem = max(problem_dict, key=problem_dict.get)
+top_count = problem_dict[top_problem]
+
+if top_count > 0:
+    st.write(f"Most reported issue: **{top_problem}**")
+else:
+    st.write("No dominant problem detected.")
+
+# ---------------- DATA-DRIVEN AI SUGGESTIONS ----------------
 st.subheader("🤖 AI Business Suggestions")
 
-if service_issues > food_issues and service_issues > price_issues:
-    st.info("Main issue: Improve service speed and order handling.")
+max_issue = max(service_issues, price_issues, food_issues, staff_issues, clean_issues)
 
-if food_issues > service_issues:
-    st.info("Main issue: Improve food taste and consistency.")
+if max_issue == 0:
+    st.success("Customers are generally satisfied. Maintain current performance!")
+else:
+    if service_issues == max_issue:
+        st.error("Primary issue: Improve service speed and reduce waiting time.")
+    if food_issues == max_issue:
+        st.error("Primary issue: Improve food taste and quality consistency.")
+    if price_issues == max_issue:
+        st.error("Primary issue: Customers feel pricing is high. Review menu pricing.")
+    if staff_issues == max_issue:
+        st.error("Primary issue: Staff behavior concerns. Provide training.")
+    if clean_issues == max_issue:
+        st.error("Primary issue: Cleanliness concerns. Improve hygiene standards.")
 
-if price_issues > 0:
-    st.info("Customers feel pricing is high. Review pricing strategy.")
-
-if staff_issues > 0:
-    st.info("Staff behavior concerns detected. Consider training.")
-
-if clean_issues > 0:
-    st.info("Improve cleanliness and hygiene standards.")
-
-if avg_rating is not None:
-    if avg_rating < 3:
-        st.error("Urgent action needed: Customer satisfaction is low.")
-    elif avg_rating < 4:
-        st.warning("Moderate performance. Focus on improvement areas.")
-    else:
-        st.success("Strong performance. Maintain service quality.")
+# Secondary suggestions
+if service_issues >= 2:
+    st.info("Improve service speed during peak hours.")
+if food_issues >= 2:
+    st.info("Focus on food quality consistency.")
+if price_issues >= 2:
+    st.info("Customers feel prices are slightly high.")
+if staff_issues >= 2:
+    st.info("Invest in staff training programs.")
+if clean_issues >= 2:
+    st.info("Strengthen hygiene monitoring.")
 
 # ---------------- REVIEWS TABLE ----------------
 st.subheader("📄 Recent Customer Reviews")
