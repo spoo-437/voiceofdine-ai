@@ -183,4 +183,3 @@ if rude > 1:
 # -----------------------------
 st.subheader("📄 Recent Customer Reviews")
 st.dataframe(restaurant_df[[review_col]].head(15))
-
