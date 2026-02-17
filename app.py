@@ -22,28 +22,25 @@ df = pd.read_csv("reviews.csv")
 # -----------------------------
 # AUTO DETECT COLUMN NAMES
 # -----------------------------
-cols = [c.lower() for c in df.columns]
-
-# restaurant name column
 restaurant_col = None
-for c in df.columns:
-    if "name" in c.lower() or "restaurant" in c.lower() or "cafe" in c.lower():
-        restaurant_col = c
-        break
-
-# review column
 review_col = None
-for c in df.columns:
-    if "review" in c.lower() or "text" in c.lower():
-        review_col = c
-        break
-
-# rating column (optional)
 rating_col = None
+
 for c in df.columns:
-    if "rating" in c.lower() or "star" in c.lower():
+    cl = c.lower()
+    if restaurant_col is None and ("name" in cl or "restaurant" in cl or "cafe" in cl):
+        restaurant_col = c
+    if review_col is None and ("review" in cl or "text" in cl):
+        review_col = c
+    if rating_col is None and ("rating" in cl or "star" in cl):
         rating_col = c
-        break
+
+# -----------------------------
+# CLEAN RATING COLUMN (FIX ERROR)
+# -----------------------------
+if rating_col:
+    df[rating_col] = df[rating_col].astype(str).str.extract(r'(\d+\.?\d*)')
+    df[rating_col] = pd.to_numeric(df[rating_col], errors='coerce')
 
 # -----------------------------
 # SENTIMENT FUNCTION (NLP)
@@ -63,7 +60,7 @@ def get_sentiment(text):
 df["Sentiment"] = df[review_col].apply(get_sentiment)
 
 # -----------------------------
-# LOGIN STYLE SELECTOR
+# RESTAURANT LOGIN
 # -----------------------------
 st.sidebar.title("🔐 Restaurant Login")
 
@@ -77,7 +74,7 @@ selected_restaurant = st.sidebar.selectbox(
 restaurant_df = df[df[restaurant_col] == selected_restaurant]
 
 # -----------------------------
-# DASHBOARD HEADER
+# HEADER
 # -----------------------------
 st.subheader(f"📊 Dashboard for: {selected_restaurant}")
 
@@ -85,15 +82,18 @@ col1, col2 = st.columns(2)
 
 col1.metric("Total Reviews", len(restaurant_df))
 
-if rating_col:
-    col2.metric("Average Rating", round(restaurant_df[rating_col].mean(), 2))
+# SAFE RATING DISPLAY
+if rating_col and restaurant_df[rating_col].notna().sum() > 0:
+    avg_rating = restaurant_df[rating_col].mean()
+    col2.metric("Average Rating", round(avg_rating, 2))
+else:
+    avg_rating = None
+    col2.metric("Average Rating", "N/A")
 
 # -----------------------------
 # BUSINESS HEALTH SCORE
 # -----------------------------
-if rating_col:
-    avg_rating = restaurant_df[rating_col].mean()
-
+if avg_rating is not None:
     if avg_rating >= 4:
         health = "🟢 Excellent"
     elif avg_rating >= 3:
@@ -105,7 +105,7 @@ if rating_col:
     st.write(health)
 
 # -----------------------------
-# SENTIMENT ANALYSIS
+# SENTIMENT PIE CHART
 # -----------------------------
 st.subheader("😊 Customer Sentiment Distribution")
 
@@ -132,7 +132,7 @@ st.pyplot(plt)
 # -----------------------------
 # COMPLAINT DETECTION
 # -----------------------------
-st.subheader("⚠️ Detected Customer Complaints")
+st.subheader("⚠️ Key Customer Complaints")
 
 reviews_text = text.lower()
 
@@ -140,6 +140,7 @@ slow = reviews_text.count("slow")
 expensive = reviews_text.count("expensive")
 rude = reviews_text.count("rude")
 bad = reviews_text.count("bad")
+dirty = reviews_text.count("dirty")
 
 if slow > 2:
     st.warning(f"{slow} mentions of slow service")
@@ -153,15 +154,18 @@ if rude > 1:
 if bad > 2:
     st.warning("Food quality complaints detected")
 
-if slow == 0 and expensive == 0 and rude == 0 and bad == 0:
+if dirty > 1:
+    st.warning("Cleanliness issues detected")
+
+if slow == 0 and expensive == 0 and rude == 0 and bad == 0 and dirty == 0:
     st.success("No major complaints detected")
 
 # -----------------------------
-# AI SUGGESTIONS
+# AI BUSINESS SUGGESTIONS
 # -----------------------------
 st.subheader("🤖 AI Business Suggestions")
 
-if rating_col:
+if avg_rating is not None:
     if avg_rating < 3:
         st.error("Customers are highly dissatisfied. Immediate improvements needed.")
     elif avg_rating < 4:
@@ -178,8 +182,14 @@ if expensive > 2:
 if rude > 1:
     st.info("Provide staff training to improve customer interaction.")
 
+if bad > 2:
+    st.info("Improve food quality and consistency.")
+
+if dirty > 1:
+    st.info("Improve cleanliness and hygiene standards.")
+
 # -----------------------------
-# REVIEW TABLE
+# REVIEWS TABLE
 # -----------------------------
 st.subheader("📄 Recent Customer Reviews")
 st.dataframe(restaurant_df[[review_col]].head(15))
