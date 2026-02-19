@@ -5,18 +5,17 @@ import plotly.express as px
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
-# ---------------- PAGE SETTINGS ----------------
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="VoiceOfDine AI", layout="wide")
 
 st.title("🍽️ VoiceOfDine AI")
-st.subheader("Restaurant Review Intelligence & Decision Support System")
-st.caption("AI-powered Customer Feedback Analysis")
+st.subheader("Restaurant Review Intelligence & AI Decision System")
+st.caption("Dynamic NLP-Powered Business Intelligence Dashboard")
 
 # ---------------- LOGIN SECTION ----------------
 st.sidebar.title("🔐 Restaurant Login")
 
 restaurant_name = st.sidebar.text_input("Enter Your Restaurant Name")
-
 uploaded_file = st.sidebar.file_uploader("Upload Your Reviews CSV (Optional)", type=["csv"])
 
 # ---------------- LOAD DATA ----------------
@@ -29,10 +28,10 @@ else:
         df = None
 
 if df is None:
-    st.error("No dataset available.")
+    st.error("No dataset found.")
     st.stop()
 
-# ---------------- AUTO DETECT COLUMNS ----------------
+# ---------------- DETECT COLUMNS ----------------
 restaurant_col = None
 review_col = None
 rating_col = None
@@ -60,7 +59,7 @@ else:
         restaurant_df = pd.DataFrame()
 
 if restaurant_df.empty:
-    st.warning("No reviews found. Please upload your review file.")
+    st.warning("No reviews found. Please upload your dataset.")
     st.stop()
 
 # ---------------- CLEAN RATING ----------------
@@ -87,7 +86,6 @@ restaurant_df["Sentiment"] = restaurant_df[review_col].apply(get_sentiment)
 st.subheader(f"📊 Dashboard for: {restaurant_name}")
 
 col1, col2 = st.columns(2)
-
 col1.metric("Total Reviews", len(restaurant_df))
 
 if rating_col and restaurant_df[rating_col].notna().sum() > 0:
@@ -119,14 +117,16 @@ plt.axis("off")
 st.pyplot(plt)
 
 # ---------------- AI DECISION ENGINE ----------------
-st.subheader("🧠 AI Decision Engine")
+st.subheader("🧠 AI Risk & Decision Engine")
 
 total_reviews = len(restaurant_df)
 negative_count = len(restaurant_df[restaurant_df["Sentiment"] == "Negative"])
+positive_count = len(restaurant_df[restaurant_df["Sentiment"] == "Positive"])
 
 negative_ratio = negative_count / total_reviews
+positive_ratio = positive_count / total_reviews
 
-# Complaint keyword groups
+# --- Keyword Groups ---
 service_words = ["slow", "delay", "waiting", "late"]
 food_words = ["bad", "tasteless", "cold", "worst"]
 price_words = ["expensive", "overpriced"]
@@ -136,61 +136,93 @@ clean_words = ["dirty", "hygiene"]
 def count_words(word_list):
     return sum(text_data.count(w) for w in word_list)
 
-service_score = count_words(service_words)
-food_score = count_words(food_words)
-price_score = count_words(price_words)
-staff_score = count_words(staff_words)
-clean_score = count_words(clean_words)
-
-issue_dict = {
-    "Service": service_score,
-    "Food Quality": food_score,
-    "Pricing": price_score,
-    "Staff Behavior": staff_score,
-    "Cleanliness": clean_score
+issue_scores = {
+    "Service": count_words(service_words),
+    "Food Quality": count_words(food_words),
+    "Pricing": count_words(price_words),
+    "Staff Behavior": count_words(staff_words),
+    "Cleanliness": count_words(clean_words)
 }
 
-main_issue = max(issue_dict, key=issue_dict.get)
+# Normalize scores
+for key in issue_scores:
+    issue_scores[key] = issue_scores[key] / total_reviews
+
+main_issue = max(issue_scores, key=issue_scores.get)
+severity = issue_scores[main_issue]
 
 # ---------------- RISK LEVEL ----------------
-if negative_ratio > 0.4:
+if negative_ratio > 0.5:
+    risk = "Critical"
     st.error("🔴 CRITICAL RISK LEVEL")
-    st.write("### 📌 Strategic Actions Required:")
 
-elif negative_ratio > 0.2:
+elif negative_ratio > 0.3:
+    risk = "High"
+    st.warning("🟠 HIGH RISK LEVEL")
+
+elif negative_ratio > 0.15:
+    risk = "Moderate"
     st.warning("🟡 MODERATE RISK LEVEL")
-    st.write("### 📌 Improvement Recommended:")
 
 else:
-    st.success("🟢 STABLE PERFORMANCE")
-    st.write("### 📌 Maintain Current Standards")
+    risk = "Low"
+    st.success("🟢 LOW RISK LEVEL")
 
-# ---------------- STRATEGIC ACTION PLAN ----------------
-if main_issue == "Service":
-    st.write("- Increase staff during peak hours")
-    st.write("- Optimize order management system")
-    st.write("- Conduct service training")
+st.write(f"### 📌 Main Issue Detected: {main_issue}")
 
-elif main_issue == "Food Quality":
-    st.write("- Review ingredient quality")
-    st.write("- Standardize cooking process")
-    st.write("- Conduct kitchen audit")
+# ---------------- DYNAMIC STRATEGY ----------------
+if risk == "Critical":
+    st.write("### 🚨 Immediate Strategic Intervention Required")
 
-elif main_issue == "Pricing":
-    st.write("- Compare competitor pricing")
-    st.write("- Introduce combo offers")
-    st.write("- Improve value perception")
+    if main_issue == "Service":
+        st.write("- Hire additional staff")
+        st.write("- Redesign workflow process")
+        st.write("- Implement service KPIs")
 
-elif main_issue == "Staff Behavior":
-    st.write("- Provide customer service training")
-    st.write("- Monitor staff performance")
-    st.write("- Improve customer interaction protocols")
+    elif main_issue == "Food Quality":
+        st.write("- Replace suppliers")
+        st.write("- Conduct kitchen audit")
+        st.write("- Introduce strict quality control")
 
-elif main_issue == "Cleanliness":
-    st.write("- Conduct hygiene inspection")
-    st.write("- Increase cleaning frequency")
-    st.write("- Assign cleanliness supervisor")
+    elif main_issue == "Pricing":
+        st.write("- Reposition pricing strategy")
+        st.write("- Launch aggressive promotions")
+        st.write("- Conduct competitor analysis")
 
-# ---------------- SHOW REVIEWS ----------------
+    elif main_issue == "Staff Behavior":
+        st.write("- Mandatory staff retraining")
+        st.write("- Performance monitoring system")
+        st.write("- Improve service protocols")
+
+    elif main_issue == "Cleanliness":
+        st.write("- Immediate hygiene inspection")
+        st.write("- Increase cleaning frequency")
+        st.write("- Assign sanitation supervisor")
+
+elif risk == "High":
+    st.write("### ⚠ Strategic Improvement Plan")
+    st.write(f"- Focus operational improvements on {main_issue}")
+    st.write("- Monitor feedback weekly")
+    st.write("- Set measurable improvement targets")
+
+elif risk == "Moderate":
+    st.write("### 📈 Controlled Optimization Strategy")
+    st.write(f"- Minor improvements required in {main_issue}")
+    st.write("- Track monthly performance")
+    st.write("- Improve operational efficiency")
+
+else:
+    st.write("### ✅ Maintain Operational Excellence")
+
+    if positive_ratio > 0.6:
+        st.write("- Expand marketing campaigns")
+        st.write("- Introduce loyalty programs")
+        st.write("- Consider business expansion")
+
+    else:
+        st.write("- Maintain monitoring system")
+        st.write("- Improve minor customer touchpoints")
+
+# ---------------- RECENT REVIEWS ----------------
 st.subheader("📄 Recent Reviews")
 st.dataframe(restaurant_df[[review_col]].head(10))
