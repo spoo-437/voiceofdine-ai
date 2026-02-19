@@ -5,11 +5,12 @@ import plotly.express as px
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
+# ---------------- PAGE SETTINGS ----------------
 st.set_page_config(page_title="VoiceOfDine AI", layout="wide")
 
 st.title("🍽️ VoiceOfDine AI")
-st.subheader("Restaurant Review Intelligence System")
-st.caption("Login and analyze your customer reviews using AI")
+st.subheader("Restaurant Review Intelligence & Decision Support System")
+st.caption("AI-powered Customer Feedback Analysis")
 
 # ---------------- LOGIN SECTION ----------------
 st.sidebar.title("🔐 Restaurant Login")
@@ -59,7 +60,7 @@ else:
         restaurant_df = pd.DataFrame()
 
 if restaurant_df.empty:
-    st.warning("No reviews found for this restaurant. Please upload your review file.")
+    st.warning("No reviews found. Please upload your review file.")
     st.stop()
 
 # ---------------- CLEAN RATING ----------------
@@ -82,7 +83,7 @@ def get_sentiment(text):
 
 restaurant_df["Sentiment"] = restaurant_df[review_col].apply(get_sentiment)
 
-# ---------------- DASHBOARD ----------------
+# ---------------- DASHBOARD HEADER ----------------
 st.subheader(f"📊 Dashboard for: {restaurant_name}")
 
 col1, col2 = st.columns(2)
@@ -106,27 +107,89 @@ fig = px.pie(sentiment_counts, names="Sentiment", values="Count")
 st.plotly_chart(fig)
 
 # ---------------- WORD CLOUD ----------------
-st.subheader("🗣️ Word Cloud")
+st.subheader("🗣️ Customer Voice Insights")
 
-text = " ".join(restaurant_df[review_col].astype(str))
-wc = WordCloud(width=800, height=400, background_color="white").generate(text)
+text_data = " ".join(restaurant_df[review_col].astype(str)).lower()
+
+wc = WordCloud(width=800, height=400, background_color="white").generate(text_data)
 
 plt.figure(figsize=(10, 5))
 plt.imshow(wc, interpolation="bilinear")
 plt.axis("off")
 st.pyplot(plt)
 
-# ---------------- SIMPLE AI SUGGESTION ----------------
-st.subheader("🤖 AI Suggestion")
+# ---------------- AI DECISION ENGINE ----------------
+st.subheader("🧠 AI Decision Engine")
 
+total_reviews = len(restaurant_df)
 negative_count = len(restaurant_df[restaurant_df["Sentiment"] == "Negative"])
 
-if negative_count > len(restaurant_df) * 0.4:
-    st.error("High negative feedback detected. Immediate improvement required.")
-elif negative_count > len(restaurant_df) * 0.2:
-    st.warning("Moderate negative feedback. Focus on service improvements.")
+negative_ratio = negative_count / total_reviews
+
+# Complaint keyword groups
+service_words = ["slow", "delay", "waiting", "late"]
+food_words = ["bad", "tasteless", "cold", "worst"]
+price_words = ["expensive", "overpriced"]
+staff_words = ["rude", "unfriendly"]
+clean_words = ["dirty", "hygiene"]
+
+def count_words(word_list):
+    return sum(text_data.count(w) for w in word_list)
+
+service_score = count_words(service_words)
+food_score = count_words(food_words)
+price_score = count_words(price_words)
+staff_score = count_words(staff_words)
+clean_score = count_words(clean_words)
+
+issue_dict = {
+    "Service": service_score,
+    "Food Quality": food_score,
+    "Pricing": price_score,
+    "Staff Behavior": staff_score,
+    "Cleanliness": clean_score
+}
+
+main_issue = max(issue_dict, key=issue_dict.get)
+
+# ---------------- RISK LEVEL ----------------
+if negative_ratio > 0.4:
+    st.error("🔴 CRITICAL RISK LEVEL")
+    st.write("### 📌 Strategic Actions Required:")
+
+elif negative_ratio > 0.2:
+    st.warning("🟡 MODERATE RISK LEVEL")
+    st.write("### 📌 Improvement Recommended:")
+
 else:
-    st.success("Customer sentiment is mostly positive. Maintain quality.")
+    st.success("🟢 STABLE PERFORMANCE")
+    st.write("### 📌 Maintain Current Standards")
+
+# ---------------- STRATEGIC ACTION PLAN ----------------
+if main_issue == "Service":
+    st.write("- Increase staff during peak hours")
+    st.write("- Optimize order management system")
+    st.write("- Conduct service training")
+
+elif main_issue == "Food Quality":
+    st.write("- Review ingredient quality")
+    st.write("- Standardize cooking process")
+    st.write("- Conduct kitchen audit")
+
+elif main_issue == "Pricing":
+    st.write("- Compare competitor pricing")
+    st.write("- Introduce combo offers")
+    st.write("- Improve value perception")
+
+elif main_issue == "Staff Behavior":
+    st.write("- Provide customer service training")
+    st.write("- Monitor staff performance")
+    st.write("- Improve customer interaction protocols")
+
+elif main_issue == "Cleanliness":
+    st.write("- Conduct hygiene inspection")
+    st.write("- Increase cleaning frequency")
+    st.write("- Assign cleanliness supervisor")
 
 # ---------------- SHOW REVIEWS ----------------
 st.subheader("📄 Recent Reviews")
